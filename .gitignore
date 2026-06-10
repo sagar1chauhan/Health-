@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.pyo
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Python
+venv/
+.venv/
+saved_models/*.joblib
+saved_models/*.h5
+saved_models/*.pkl
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
