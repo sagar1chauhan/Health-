@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, Activity, Stethoscope, Apple, Calendar, 
-  Settings, LogOut, Bell, Menu, X, User, ChevronDown
+  Settings, LogOut, Bell, Menu, X, User, ChevronDown,
+  Video, Watch, Users
 } from 'lucide-react';
 import { logout } from '../features/auth/authSlice';
 import toast from 'react-hot-toast';
@@ -13,14 +14,25 @@ const patientLinks = [
   { name: 'Overview', icon: Home, path: '/dashboard' },
   { name: 'Disease Prediction', icon: Activity, path: '/dashboard/prediction' },
   { name: 'Appointments', icon: Calendar, path: '/dashboard/appointments' },
+  { name: 'Telemedicine', icon: Video, path: '/dashboard/telemedicine' },
+  { name: 'Wearables & IoT', icon: Watch, path: '/dashboard/wearables' },
   { name: 'Recommendations', icon: Apple, path: '/dashboard/recommendations' },
   { name: 'Medical Records', icon: Stethoscope, path: '/dashboard/records' },
+  { name: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ];
 
 const doctorLinks = [
   { name: 'Dashboard', icon: Home, path: '/dashboard' },
   { name: 'My Patients', icon: User, path: '/dashboard/patients' },
   { name: 'Appointments', icon: Calendar, path: '/dashboard/appointments' },
+  { name: 'Telemedicine', icon: Video, path: '/dashboard/telemedicine' },
+  { name: 'Settings', icon: Settings, path: '/dashboard/settings' },
+];
+
+const adminLinks = [
+  { name: 'Dashboard', icon: Home, path: '/dashboard' },
+  { name: 'Users & Platform', icon: Users, path: '/dashboard/admin' },
+  { name: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ];
 
 export default function DashboardLayout() {
@@ -48,7 +60,7 @@ export default function DashboardLayout() {
     navigate('/auth/login');
   };
 
-  const links = user?.role === 'doctor' ? doctorLinks : patientLinks;
+  const links = user?.role === 'admin' ? adminLinks : user?.role === 'doctor' ? doctorLinks : patientLinks;
 
   return (
     <div className="flex h-screen bg-dark-bg text-slate-200 overflow-hidden font-sans">
@@ -126,7 +138,10 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-6">
-            <button className="relative p-2 text-slate-300 hover:text-white transition-colors">
+            <button 
+              onClick={() => navigate('/dashboard/notifications')}
+              className="relative p-2 text-slate-300 hover:text-white transition-colors"
+            >
               <Bell size={22} />
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-dark-card" />
             </button>

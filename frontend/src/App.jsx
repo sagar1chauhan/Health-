@@ -3,7 +3,8 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import api from './app/api';
-import { setUser } from './features/auth/authSlice';
+import { setUser } from './modules/auth/store/authSlice';
+import AIAssistantWidget from './modules/ai-assistant/components/AIAssistantWidget';
 
 function App() {
   const dispatch = useDispatch();
@@ -27,6 +28,7 @@ function App() {
     <>
       <Outlet />
       <Toaster position="top-right" />
+      <AIAssistantWidget />
     </>
   );
 }

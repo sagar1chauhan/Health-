@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -23,8 +23,7 @@ import predictionRoutes from './modules/disease-prediction/disease-prediction.ro
 import recommendationRoutes from './modules/recommendations/recommendations.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import analyticsRoutes from './modules/analytics/analytics.routes.js';
-
-dotenv.config();
+import aiAssistantRoutes from './modules/ai-assistant/ai-assistant.routes.js';
 
 const app = express();
 const server = createServer(app);
@@ -64,6 +63,11 @@ app.use('/api/predictions', predictionRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ai-assistant', aiAssistantRoutes);
+import telemedicineRoutes from './modules/telemedicine/telemedicine.routes.js';
+import wearablesRoutes from './modules/wearables/wearables.routes.js';
+app.use('/api/telemedicine', telemedicineRoutes);
+app.use('/api/wearables', wearablesRoutes);
 
 // Base route
 app.get('/', (req, res) => {

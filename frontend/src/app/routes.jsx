@@ -1,21 +1,35 @@
 import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
-import LandingPage from '../pages/Landing/LandingPage';
-import LoginPage from '../pages/Auth/LoginPage';
-import RegisterPage from '../pages/Auth/RegisterPage';
-import PatientDashboard from '../pages/Dashboard/PatientDashboard';
-import PredictionForm from '../pages/DiseasePrediction/PredictionForm';
-import PredictionResults from '../pages/DiseasePrediction/PredictionResults';
-import DashboardLayout from '../layouts/DashboardLayout';
-import AppointmentsPage from '../pages/Appointments/AppointmentsPage';
-import RecommendationsPage from '../pages/Recommendations/RecommendationsPage';
-import MedicalRecordsPage from '../pages/MedicalRecords/MedicalRecordsPage';
-import DoctorDashboard from '../pages/Dashboard/DoctorDashboard';
+import LandingPage from '../modules/landing/pages/LandingPage';
+import LoginPage from '../modules/auth/pages/LoginPage';
+import RegisterPage from '../modules/auth/pages/RegisterPage';
+import PatientDashboard from '../modules/dashboard/pages/PatientDashboard';
+import PredictionForm from '../modules/disease-prediction/pages/PredictionForm';
+import PredictionResults from '../modules/disease-prediction/pages/PredictionResults';
+import DashboardLayout from '../shared/layouts/DashboardLayout';
+import AppointmentsPage from '../modules/appointments/pages/AppointmentsPage';
+import RecommendationsPage from '../modules/recommendations/pages/RecommendationsPage';
+import MedicalRecordsPage from '../modules/medical-records/pages/MedicalRecordsPage';
+import DoctorDashboard from '../modules/dashboard/pages/DoctorDashboard';
+import ProfilePage from '../modules/profile/pages/ProfilePage';
+import NotificationsPage from '../modules/notifications/pages/NotificationsPage';
+import DoctorProfilePage from '../modules/profile/pages/DoctorProfilePage';
+import MyPatientsPage from '../modules/patients/pages/MyPatientsPage';
+import AdminDashboard from '../modules/dashboard/pages/AdminDashboard';
+import TelemedicinePage from '../modules/telemedicine/pages/TelemedicinePage';
+import WearablesPage from '../modules/wearables/pages/WearablesPage';
+import SettingsPage from '../modules/settings/pages/SettingsPage';
 import { useSelector } from 'react-redux';
 
 const DashboardIndex = () => {
   const { user } = useSelector(state => state.auth);
+  if (user?.role === 'admin') return <AdminDashboard />;
   return user?.role === 'doctor' ? <DoctorDashboard /> : <PatientDashboard />;
+};
+
+const ProfileIndex = () => {
+  const { user } = useSelector(state => state.auth);
+  return user?.role === 'doctor' ? <DoctorProfilePage /> : <ProfilePage />;
 };
 export const router = createBrowserRouter([
   {
@@ -43,7 +57,12 @@ export const router = createBrowserRouter([
           { path: 'appointments', element: <AppointmentsPage /> },
           { path: 'recommendations', element: <RecommendationsPage /> },
           { path: 'records', element: <MedicalRecordsPage /> },
-          { path: 'patients', element: <div className="p-8 text-slate-400">My Patients Module Coming Soon</div> },
+          { path: 'profile', element: <ProfileIndex /> },
+          { path: 'patients', element: <MyPatientsPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
+          { path: 'telemedicine', element: <TelemedicinePage /> },
+          { path: 'wearables', element: <WearablesPage /> },
+          { path: 'settings', element: <SettingsPage /> },
         ],
       },
     ],

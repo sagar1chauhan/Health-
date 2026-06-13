@@ -49,7 +49,7 @@ const medicalRecordSchema = new mongoose.Schema(
         name: String,
         url: String,
         publicId: String,
-        type: String, // 'pdf', 'image', 'document'
+        type: { type: String }, // Mongoose requires this nested syntax when a field is named 'type'
         size: Number,
         uploadedAt: { type: Date, default: Date.now },
       },
