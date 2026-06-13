@@ -16,7 +16,8 @@ api.interceptors.response.use(
     if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        await axios.post('/api/auth/refresh-token', {}, { withCredentials: true });
+        const baseURL = import.meta.env.VITE_API_URL || '/api';
+        await axios.post(`${baseURL}/auth/refresh-token`, {}, { withCredentials: true });
         return api(originalRequest);
       } catch (err) {
         // Handle logout
