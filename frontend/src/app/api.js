@@ -16,7 +16,7 @@ api.interceptors.response.use(
     if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const baseURL = import.meta.env.VITE_API_URL || '/api';
+        const baseURL = api.defaults.baseURL;
         await axios.post(`${baseURL}/auth/refresh-token`, {}, { withCredentials: true });
         return api(originalRequest);
       } catch (err) {
