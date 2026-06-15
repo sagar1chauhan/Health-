@@ -20,8 +20,8 @@ const generateTokens = (userId) => {
 // Set cookie options
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: process.env.NODE_ENV === 'production', // true in production, false in dev
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-domain prod, 'lax' for local dev
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 

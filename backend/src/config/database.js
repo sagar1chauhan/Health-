@@ -2,13 +2,20 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      maxPoolSize: 10,
+    const mongoUrl = process.env.MONGODB_URI;
+
+    if (!mongoUrl) {
+      console.error('❌ MONGODB_URI is not defined in the environment variables');
+      process.exit(1);
+    }
+
+    const conn = await mongoose.connect(mongoUrl, {
+      maxPoolSize: process.env.NODE_ENV === 'production' ? 50 : 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host} [${process.env.NODE_ENV || 'development'}]`);
 
     mongoose.connection.on('error', (err) => {
       console.error(`❌ MongoDB Error: ${err.message}`);
