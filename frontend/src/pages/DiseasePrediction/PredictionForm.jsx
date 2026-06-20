@@ -29,7 +29,7 @@ export default function PredictionForm() {
   const [missingFields, setMissingFields] = useState([]);
   const bannerRef = useRef(null);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, trigger, formState: { errors } } = useForm({
     defaultValues: {
       age: '',
       gender: '1',
@@ -139,7 +139,18 @@ export default function PredictionForm() {
     }
   };
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
+  const nextStep = async () => {
+    let fieldsToValidate = [];
+    if (currentStep === 1) fieldsToValidate = ['age', 'gender', 'bmi'];
+    if (currentStep === 2) fieldsToValidate = ['bloodPressureSystolic', 'bloodPressureDiastolic', 'glucoseLevel', 'cholesterolTotal', 'cholesterolHDL'];
+    
+    const isStepValid = await trigger(fieldsToValidate);
+    if (isStepValid) {
+      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+    } else {
+      toast.error("Please fill in all required fields correctly.");
+    }
+  };
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   // Animation variants
@@ -250,122 +261,119 @@ export default function PredictionForm() {
           
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="min-h-[350px] relative">
-              <AnimatePresence mode="wait">
+              <div className="relative">
                 
                 {/* STEP 1 */}
-                {currentStep === 1 && (
-                  <motion.div key="step1" variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                    <div className="flex items-center gap-2 mb-6 text-primary">
-                      <Activity size={24} />
-                      <h3 className="text-xl font-semibold text-white">Physical Measurements</h3>
+                <div className={`space-y-6 ${currentStep === 1 ? 'block' : 'hidden'}`}>
+                  <div className="flex items-center gap-2 mb-6 text-primary">
+                    <Activity size={24} />
+                    <h3 className="text-xl font-semibold text-white">Physical Measurements</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Age</label>
+                      <input {...register('age', { required: 'Age is required', min: { value: 1, message: 'Age must be at least 1' }, max: { value: 150, message: 'Age seems invalid' } })} type="number" placeholder="e.g. 28" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
+                      {errors.age && <p className="text-red-400 text-xs mt-1">{errors.age.message}</p>}
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Age</label>
-                        <input {...register('age', { required: 'Age is required', min: { value: 1, message: 'Age must be at least 1' }, max: { value: 150, message: 'Age seems invalid' } })} type="number" placeholder="e.g. 28" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
-                        {errors.age && <p className="text-red-400 text-xs mt-1">{errors.age.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Gender</label>
-                        <select {...register('gender')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
-                          <option value="1">Male</option>
-                          <option value="0">Female</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">BMI (Body Mass Index)</label>
-                        <input {...register('bmi', { required: 'BMI is required', min: { value: 10, message: 'BMI seems too low' }, max: { value: 70, message: 'BMI seems too high' } })} type="number" step="0.1" placeholder="e.g. 24.5" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
-                        {errors.bmi && <p className="text-red-400 text-xs mt-1">{errors.bmi.message}</p>}
-                      </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Gender</label>
+                      <select {...register('gender')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
+                        <option value="1">Male</option>
+                        <option value="0">Female</option>
+                      </select>
                     </div>
-                  </motion.div>
-                )}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">BMI (Body Mass Index)</label>
+                      <input {...register('bmi', { required: 'BMI is required', min: { value: 10, message: 'BMI seems too low' }, max: { value: 70, message: 'BMI seems too high' } })} type="number" step="0.1" placeholder="e.g. 24.5" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
+                      {errors.bmi && <p className="text-red-400 text-xs mt-1">{errors.bmi.message}</p>}
+                    </div>
+                  </div>
+                </div>
 
                 {/* STEP 2 */}
-                {currentStep === 2 && (
-                  <motion.div key="step2" variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                    <div className="flex items-center gap-2 mb-6 text-red-400">
-                      <Heart size={24} />
-                      <h3 className="text-xl font-semibold text-white">Cardiovascular & Blood</h3>
+                <div className={`space-y-6 ${currentStep === 2 ? 'block' : 'hidden'}`}>
+                  <div className="flex items-center gap-2 mb-6 text-red-400">
+                    <Heart size={24} />
+                    <h3 className="text-xl font-semibold text-white">Cardiovascular & Blood</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Systolic Blood Pressure</label>
+                      <input {...register('bloodPressureSystolic', { required: 'Systolic BP is required', min: { value: 50, message: 'Must be at least 50 mmHg' } })} type="number" placeholder="e.g. 120" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
+                      {errors.bloodPressureSystolic && <p className="text-red-400 text-xs mt-1">{errors.bloodPressureSystolic.message}</p>}
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Systolic Blood Pressure</label>
-                        <input {...register('bloodPressureSystolic', { required: 'Systolic BP is required', min: { value: 50, message: 'Must be at least 50 mmHg' } })} type="number" placeholder="e.g. 120" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
-                        {errors.bloodPressureSystolic && <p className="text-red-400 text-xs mt-1">{errors.bloodPressureSystolic.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Diastolic Blood Pressure</label>
-                        <input {...register('bloodPressureDiastolic', { required: 'Diastolic BP is required', min: { value: 30, message: 'Must be at least 30 mmHg' } })} type="number" placeholder="e.g. 80" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
-                        {errors.bloodPressureDiastolic && <p className="text-red-400 text-xs mt-1">{errors.bloodPressureDiastolic.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Fasting Glucose Level</label>
-                        <input {...register('glucoseLevel', { required: 'Glucose level is required', min: { value: 20, message: 'Must be at least 20 mg/dL' } })} type="number" placeholder="e.g. 95" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
-                        {errors.glucoseLevel && <p className="text-red-400 text-xs mt-1">{errors.glucoseLevel.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Total Cholesterol</label>
-                        <input {...register('cholesterolTotal', { required: 'Cholesterol is required', min: { value: 50, message: 'Must be at least 50 mg/dL' } })} type="number" placeholder="e.g. 190" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
-                        {errors.cholesterolTotal && <p className="text-red-400 text-xs mt-1">{errors.cholesterolTotal.message}</p>}
-                      </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Diastolic Blood Pressure</label>
+                      <input {...register('bloodPressureDiastolic', { required: 'Diastolic BP is required', min: { value: 30, message: 'Must be at least 30 mmHg' } })} type="number" placeholder="e.g. 80" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
+                      {errors.bloodPressureDiastolic && <p className="text-red-400 text-xs mt-1">{errors.bloodPressureDiastolic.message}</p>}
                     </div>
-                  </motion.div>
-                )}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Fasting Glucose Level</label>
+                      <input {...register('glucoseLevel', { required: 'Glucose level is required', min: { value: 20, message: 'Must be at least 20 mg/dL' } })} type="number" placeholder="e.g. 95" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
+                      {errors.glucoseLevel && <p className="text-red-400 text-xs mt-1">{errors.glucoseLevel.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Total Cholesterol</label>
+                      <input {...register('cholesterolTotal', { required: 'Total Cholesterol is required', min: { value: 50, message: 'Must be at least 50 mg/dL' } })} type="number" placeholder="e.g. 190" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
+                      {errors.cholesterolTotal && <p className="text-red-400 text-xs mt-1">{errors.cholesterolTotal.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">HDL Cholesterol</label>
+                      <input {...register('cholesterolHDL', { required: 'HDL is required', min: { value: 10, message: 'Must be at least 10 mg/dL' } })} type="number" placeholder="e.g. 50" className="form-input w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white" />
+                      {errors.cholesterolHDL && <p className="text-red-400 text-xs mt-1">{errors.cholesterolHDL.message}</p>}
+                    </div>
+                  </div>
+                </div>
 
                 {/* STEP 3 */}
-                {currentStep === 3 && (
-                  <motion.div key="step3" variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                    <div className="flex items-center gap-2 mb-6 text-accent">
-                      <Info size={24} />
-                      <h3 className="text-xl font-semibold text-white">Lifestyle & History</h3>
+                <div className={`space-y-6 ${currentStep === 3 ? 'block' : 'hidden'}`}>
+                  <div className="flex items-center gap-2 mb-6 text-accent">
+                    <Info size={24} />
+                    <h3 className="text-xl font-semibold text-white">Lifestyle & History</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Smoking Habit</label>
+                      <select {...register('smoking')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
+                        <option value="0">Never / Former</option>
+                        <option value="1">Current Smoker</option>
+                      </select>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Smoking Habit</label>
-                        <select {...register('smoking')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
-                          <option value="0">Never / Former</option>
-                          <option value="1">Current Smoker</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Alcohol Consumption</label>
-                        <select {...register('alcohol')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
-                          <option value="0">None / Occasional</option>
-                          <option value="1">Moderate / Heavy</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Physical Activity</label>
-                        <select {...register('physicalActivity')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
-                          <option value="0">None</option>
-                          <option value="1">Low</option>
-                          <option value="2">Moderate</option>
-                          <option value="3">High</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Family History of Disease</label>
-                        <select {...register('familyHistory')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
-                          <option value="0">No</option>
-                          <option value="1">Yes</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-medium text-slate-300">Stress Level (1-5)</label>
-                        <input {...register('stressLevel')} type="range" min="1" max="5" className="w-full accent-primary mt-3" />
-                        <div className="flex justify-between text-xs text-slate-500 mt-1">
-                          <span>Low</span><span>Moderate</span><span>High</span>
-                        </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Alcohol Consumption</label>
+                      <select {...register('alcohol')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
+                        <option value="0">None / Occasional</option>
+                        <option value="1">Moderate / Heavy</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Physical Activity</label>
+                      <select {...register('physicalActivity')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
+                        <option value="0">None</option>
+                        <option value="1">Low</option>
+                        <option value="2">Moderate</option>
+                        <option value="3">High</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Family History of Disease</label>
+                      <select {...register('familyHistory')} className="form-select w-full bg-dark-bg/50 border border-dark-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none py-3 px-4 text-white">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-sm font-medium text-slate-300">Stress Level (1-5)</label>
+                      <input {...register('stressLevel')} type="range" min="1" max="5" className="w-full accent-primary mt-3" />
+                      <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>Low</span><span>Moderate</span><span>High</span>
                       </div>
                     </div>
-                  </motion.div>
-                )}
-                
-              </AnimatePresence>
+                  </div>
+                </div>
             </div>
 
             {/* Navigation Buttons */}

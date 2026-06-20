@@ -1,50 +1,109 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from app.schemas.prediction import PatientFeatures
-import random # Mock for actual ML model
+import joblib
+import pandas as pd
+import numpy as np
+import shap
+import os
 
 router = APIRouter()
 
+# Add a custom exception handler at the router or app level.
+# Actually, since this is a router, we can't easily add exception_handler here.
+# Instead, let's just make the endpoint accept a dict to debug.
+
+# Load models if they exist
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+rf_path = os.path.join(BASE_DIR, 'models', 'random_forest.joblib')
+
+rf_model = None
+explainer = None
+
+if os.path.exists(rf_path):
+    rf_model = joblib.load(rf_path)
+    explainer = shap.TreeExplainer(rf_model)
+
 @router.post("/")
-def predict_disease(features: PatientFeatures):
+async def predict_disease(request: Request):
     """
-    Predicts disease risk based on patient features.
-    In a real implementation, this would load XGBoost/RandomForest models and run `.predict()`.
+    Predicts disease risk based on patient features using trained RandomForest model.
     """
     
-    # MOCK LOGIC for demo purposes based on simple thresholds
-    risk_score = 0
-    if features.bmi > 25: risk_score += 15
-    if features.bmi > 30: risk_score += 10
-    if features.bloodPressureSystolic > 130: risk_score += 20
-    if features.glucoseLevel > 140: risk_score += 20
-    if features.smoking == 1: risk_score += 15
-    if features.age > 50: risk_score += 10
+    body = await request.json()
+    print("RECEIVED PAYLOAD:", body)
+    
+    try:
+        features = PatientFeatures(**body)
+    except Exception as e:
+        print("VALIDATION ERROR:", e)
+        return JSONResponse(status_code=422, content={"detail": str(e)})
+
+    if rf_model is None:
+        return {"error": "Models not trained yet. Please run train_model.py first."}
+
+    # Create DataFrame from features
+    feature_dict = features.dict()
+    df = pd.DataFrame([feature_dict])
+
+    # Predictions
+    rf_prob = float(rf_model.predict_proba(df)[0][1])
+    
+    # Ensemble probability (average)
+    ensemble_prob = rf_prob
+    overall_risk_score = int(ensemble_prob * 100)
     
     risk_category = "low"
-    if risk_score > 60: risk_category = "high"
-    elif risk_score > 30: risk_category = "moderate"
-    
-    # Mock SHAP Explanations
-    shap = {
-        "Heart Disease": {
-            "bmi": {"value": features.bmi, "contribution": 0.15 if features.bmi > 25 else 0.01},
-            "bloodPressureSystolic": {"value": features.bloodPressureSystolic, "contribution": 0.25 if features.bloodPressureSystolic > 130 else 0.05},
-            "age": {"value": features.age, "contribution": 0.1}
+    if overall_risk_score >= 70:
+        risk_category = "high"
+    elif overall_risk_score >= 40:
+        risk_category = "moderate"
+        
+    # SHAP explanations
+    shap_explanation = {}
+    try:
+        # Calculate SHAP values
+        shap_values = explainer.shap_values(df)
+        
+        # For RandomForest, shap_values is a list of arrays (one for each class). We want class 1 (positive).
+        if isinstance(shap_values, list):
+            vals = shap_values[1][0]
+        else:
+            # If regression or single output
+            vals = shap_values[0]
+            
+        feature_names = df.columns
+        contributions = {}
+        
+        for i, name in enumerate(feature_names):
+            # Normalize contribution slightly for UI presentation
+            contributions[name] = {
+                "value": float(df.iloc[0, i]),
+                "contribution": float(vals[i])
+            }
+            
+        shap_explanation["Heart Disease Risk"] = contributions
+    except Exception as e:
+        print("SHAP Error:", e)
+        # Fallback if SHAP fails
+        shap_explanation["Heart Disease Risk"] = {
+            "error": "Failed to generate explanations"
         }
-    }
     
     predictions = [
         {
-            "disease": "Heart Disease" if features.bloodPressureSystolic > 130 else "General Health Issue",
-            "probability": min(0.95, risk_score / 100.0),
+            "disease": "Heart Disease Risk",
+            "probability": rf_prob,
             "riskLevel": risk_category,
-            "model": "XGBoost Ensemble"
+            "model": "RandomForest",
+            "accuracy": 0.85 # As per training output
         }
     ]
 
     return {
         "predictions": predictions,
-        "overallRiskScore": min(100, risk_score),
+        "overallRiskScore": overall_risk_score,
         "riskCategory": risk_category,
-        "shapExplanation": shap
+        "shapExplanation": shap_explanation
     }

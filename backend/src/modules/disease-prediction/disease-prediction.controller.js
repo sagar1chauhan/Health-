@@ -6,25 +6,9 @@ export const predictDisease = async (req, res, next) => {
   try {
     const inputFeatures = req.body;
     
+    console.log("SENDING TO AI SERVICE:", inputFeatures);
     // Call AI Service (FastAPI)
-    // const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/predict`, inputFeatures);
-    
-    // MOCK RESPONSE FOR NOW
-    const aiResponse = {
-      data: {
-        predictions: [
-          { disease: "Heart Disease", probability: 0.85, riskLevel: "high", model: "XGBoost" }
-        ],
-        overallRiskScore: 78,
-        riskCategory: "high",
-        shapExplanation: {
-            "Heart Disease": {
-                "bmi": { value: 30, contribution: 0.2 },
-                "age": { value: 50, contribution: 0.15 }
-            }
-        }
-      }
-    };
+    const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000'}/predict/`, inputFeatures);
 
     // Save prediction
     const prediction = await DiseasePrediction.create({

@@ -86,14 +86,22 @@ export default function PredictionResults() {
             <div className="w-full mt-8 p-4 rounded-xl bg-dark-bg/60 border border-dark-border text-left">
               <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">Model Confidence</h4>
               <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1"><span className="text-white">XGBoost Ensemble</span><span className="text-primary">85%</span></div>
-                  <div className="w-full h-1.5 bg-dark-border rounded-full overflow-hidden"><div className="h-full bg-primary w-[85%]" /></div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1"><span className="text-white">Random Forest</span><span className="text-accent">82%</span></div>
-                  <div className="w-full h-1.5 bg-dark-border rounded-full overflow-hidden"><div className="h-full bg-accent w-[82%]" /></div>
-                </div>
+                {prediction.predictions.map((pred, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-white">{pred.model || 'Model'}</span>
+                      <span className={idx === 0 ? "text-primary" : "text-accent"}>
+                        {Math.round(pred.probability * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-dark-border rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${idx === 0 ? "bg-primary" : "bg-accent"}`} 
+                        style={{ width: `${Math.round(pred.probability * 100)}%` }} 
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </GlassCard>
