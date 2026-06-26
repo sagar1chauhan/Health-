@@ -133,14 +133,20 @@ export default function PredictionResults() {
           <GlassCard>
             <h3 className="text-lg font-semibold text-white mb-4">Recommended Next Steps</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl border border-dark-border bg-dark-bg/50 hover:bg-dark-border/30 transition-colors group cursor-pointer">
+              <div 
+                className="p-4 rounded-xl border border-dark-border bg-dark-bg/50 hover:bg-dark-border/30 transition-colors group cursor-pointer"
+                onClick={() => navigate('/dashboard/recommendations')}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-semibold text-white">View Diet Plan</span>
                   <ChevronRight size={18} className="text-primary group-hover:translate-x-1 transition-transform" />
                 </div>
                 <p className="text-sm text-slate-400">AI-generated meal plan to lower blood pressure and BMI.</p>
               </div>
-              <div className="p-4 rounded-xl border border-secondary/30 bg-secondary/10 hover:bg-secondary/20 transition-colors group cursor-pointer">
+              <div 
+                className="p-4 rounded-xl border border-secondary/30 bg-secondary/10 hover:bg-secondary/20 transition-colors group cursor-pointer"
+                onClick={() => navigate('/dashboard/appointments')}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-semibold text-white">Consult Cardiologist</span>
                   <ChevronRight size={18} className="text-secondary group-hover:translate-x-1 transition-transform" />

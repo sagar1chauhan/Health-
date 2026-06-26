@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import {
   Watch, Heart, Footprints, Moon, Wind,
-  Loader2, Plus, Activity,
+  Loader2, Plus, Activity, RefreshCw
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import api from '../../../app/api';
 import { PageWrapper } from '../../../shared/components/animations/motion';
@@ -29,7 +30,9 @@ const generateMockData = () => {
 export default function WearablesPage() {
   const [wearableData, setWearableData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [chartData, setChartData] = useState([]);
+  const [isDemo, setIsDemo] = useState(false);
   const headerRef = useRef(null);
 
   useEffect(() => {
@@ -46,6 +49,7 @@ export default function WearablesPage() {
     try {
       const res = await api.get('/wearables');
       if (res.data.success && res.data.data.length > 0) {
+        setIsDemo(false);
         setWearableData(res.data.data);
         setChartData(res.data.data.map((d) => ({
           date: new Date(d.recordedAt).toLocaleDateString('en-US', { weekday: 'short' }),
@@ -55,13 +59,45 @@ export default function WearablesPage() {
           spo2: d.metrics?.oxygenLevelSpO2 || 0,
         })).reverse());
       } else {
-        // Use mock data for demonstration
+        setIsDemo(true);
         setChartData(generateMockData());
       }
     } catch {
+      setIsDemo(true);
       setChartData(generateMockData());
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncDevice = async () => {
+    try {
+      setSyncing(true);
+      
+      // Generate a new realistic data point
+      const payload = {
+        deviceType: 'smartwatch',
+        deviceModel: 'HealthHub Pro X1',
+        metrics: {
+          heartRate: [{ value: 65 + Math.floor(Math.random() * 25), timestamp: new Date() }],
+          steps: 5000 + Math.floor(Math.random() * 5000),
+          sleepDuration: (6 + Math.round(Math.random() * 3 * 10) / 10) * 60, // in minutes
+          oxygenLevelSpO2: 95 + Math.floor(Math.random() * 5),
+          bloodPressure: { systolic: 120, diastolic: 80 }
+        },
+        recordedAt: new Date()
+      };
+
+      const res = await api.post('/wearables', payload);
+      if (res.data.success) {
+        toast.success('Device synced successfully!');
+        fetchData();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to sync device data');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -86,8 +122,17 @@ export default function WearablesPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Wearables & IoT</h1>
             <p className="text-slate-400 text-sm mt-1">Track your vitals from connected devices</p>
           </div>
-          <div className="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm flex items-center gap-2">
-            <Watch size={16} /> {wearableData.length > 0 ? 'Device Connected' : 'Demo Data Shown'}
+          <div className="flex items-center gap-3">
+            <div className={`px-4 py-2 rounded-xl text-sm flex items-center gap-2 ${isDemo ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+              <Watch size={16} /> {isDemo ? 'Demo Data Shown' : 'Live Data (Connected)'}
+            </div>
+            <button 
+              onClick={handleSyncDevice} 
+              disabled={syncing}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-70"
+            >
+              <RefreshCw size={16} className={syncing ? "animate-spin" : ""} /> Sync Device
+            </button>
           </div>
         </div>
 

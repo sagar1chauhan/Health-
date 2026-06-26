@@ -1,15 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import {
   Bell, BellOff, CheckCheck, Calendar, Activity, Heart,
   Stethoscope, MessageCircle, ShieldCheck, AlertCircle,
-  Loader2, Trash2, Clock,
+  Loader2, Clock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../../../app/api';
+import {
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from '../store/notificationSlice';
 import { PageWrapper } from '../../../shared/components/animations/motion';
 import GlassCard from '../../../shared/components/ui/GlassCard';
+import { useState } from 'react';
 
 // ─── Notification type → icon + color mapping ───────────────────────────
 const typeConfig = {
@@ -38,14 +44,14 @@ const getTimeAgo = (date) => {
 };
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { items: notifications, unreadCount, loading } = useSelector((state) => state.notifications);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'read'
   const headerRef = useRef(null);
 
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    dispatch(fetchNotifications());
+  }, [dispatch]);
 
   useEffect(() => {
     if (headerRef.current && !loading) {
@@ -53,37 +59,14 @@ export default function NotificationsPage() {
     }
   }, [loading]);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await api.get('/notifications');
-      if (res.data.success) setNotifications(res.data.data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const handleMarkAsRead = (id) => {
+    dispatch(markNotificationRead(id));
   };
 
-  const handleMarkAsRead = async (id) => {
-    try {
-      await api.put(`/notifications/${id}/read`);
-      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
-    } catch {
-      toast.error('Failed to mark as read');
-    }
+  const handleMarkAllAsRead = () => {
+    dispatch(markAllNotificationsRead());
+    toast.success('All notifications marked as read');
   };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await api.put('/notifications/read-all');
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      toast.success('All notifications marked as read');
-    } catch {
-      toast.error('Failed to mark all as read');
-    }
-  };
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const filtered = notifications.filter((n) => {
     if (filter === 'unread') return !n.isRead;
@@ -91,7 +74,7 @@ export default function NotificationsPage() {
     return true;
   });
 
-  if (loading) {
+  if (loading && notifications.length === 0) {
     return (
       <PageWrapper>
         <div className="flex items-center justify-center h-64">

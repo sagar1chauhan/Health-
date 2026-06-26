@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { clearNotifications } from '../../modules/notifications/store/notificationSlice';
+import { disconnectSocket } from '../../app/socketService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, Activity, Stethoscope, Apple, Calendar, 
@@ -41,6 +43,7 @@ export default function DashboardLayout() {
   const dropdownRef = useRef(null);
   
   const { user } = useSelector(state => state.auth);
+  const { unreadCount } = useSelector(state => state.notifications);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -55,6 +58,8 @@ export default function DashboardLayout() {
   }, []);
 
   const handleLogout = async () => {
+    disconnectSocket();
+    dispatch(clearNotifications());
     await dispatch(logout());
     toast.success('Logged out successfully');
     navigate('/auth/login');
@@ -143,7 +148,11 @@ export default function DashboardLayout() {
               className="relative p-2 text-slate-300 hover:text-white transition-colors"
             >
               <Bell size={22} />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-dark-card" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 flex items-center justify-center px-1 text-[10px] font-bold bg-red-500 text-white rounded-full border-2 border-dark-card">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
             
             <div className="relative" ref={dropdownRef}>

@@ -1,46 +1,53 @@
 import AIAssistantChat from '../../models/AIAssistantChat.js';
 import PatientProfile from '../../models/PatientProfile.js';
 import crypto from 'crypto';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize Gemini API
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 /**
- * Generate a contextual mock AI response based on the user's message.
- * In production, this would call an LLM API (Gemini, OpenAI, etc.)
+ * Generate a real AI response using Gemini based on the user's message and history.
  */
-const generateMockResponse = (message, patientContext) => {
-  const lowerMsg = message.toLowerCase();
-
-  // Context-aware responses based on patient health data
-  if (patientContext && (lowerMsg.includes('health') || lowerMsg.includes('risk'))) {
-    const bmi = patientContext.bmi;
-    const risk = patientContext.healthRiskScore?.level || 'unknown';
-    return `Based on your health profile, your BMI is ${bmi || 'not recorded'} and your current risk level is **${risk}**. I recommend maintaining a balanced diet and regular exercise. Would you like personalized diet or exercise recommendations?`;
+const generateGeminiResponse = async (message, patientContext, chatHistory) => {
+  if (!process.env.GEMINI_API_KEY) {
+    return "API Key not configured. Please add GEMINI_API_KEY to your environment variables.";
   }
 
-  if (lowerMsg.includes('diet') || lowerMsg.includes('food') || lowerMsg.includes('nutrition')) {
-    return `🥗 **Diet Recommendations:**\n\n1. **Breakfast:** Oatmeal with berries and nuts (350 cal)\n2. **Lunch:** Grilled chicken salad with olive oil dressing (450 cal)\n3. **Dinner:** Baked salmon with steamed vegetables (500 cal)\n\nStay hydrated with at least 8 glasses of water daily. Would you like a detailed weekly meal plan?`;
-  }
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  if (lowerMsg.includes('exercise') || lowerMsg.includes('workout') || lowerMsg.includes('fitness')) {
-    return `🏃 **Exercise Plan for This Week:**\n\n- **Mon/Wed/Fri:** 30 min brisk walking or jogging\n- **Tue/Thu:** 20 min strength training (bodyweight exercises)\n- **Sat:** Yoga or stretching (30 min)\n- **Sun:** Rest day\n\nStart slow and gradually increase intensity. Would you like exercises specific to any health condition?`;
-  }
+    // Build system prompt based on patient context
+    let systemPrompt = "You are the HealthHub+ AI Assistant, a helpful and empathetic medical assistant. You provide general health insights, diet plans, exercise routines, and wellness tips. IMPORTANT: You must always add a short disclaimer that you are an AI and not a substitute for professional medical advice if the user asks for diagnosis or treatment.";
+    
+    if (patientContext) {
+      systemPrompt += `\n\nPatient Context:\n- BMI: ${patientContext.bmi || 'Unknown'}\n- Blood Group: ${patientContext.bloodGroup || 'Unknown'}\n- Allergies: ${patientContext.allergies?.join(', ') || 'None reported'}\n- Current Risk Level: ${patientContext.healthRiskScore?.level || 'Unknown'}`;
+      if (patientContext.medicalConditions && patientContext.medicalConditions.length > 0) {
+        systemPrompt += `\n- Known Conditions: ${patientContext.medicalConditions.join(', ')}`;
+      }
+      systemPrompt += "\nUse this context to personalize your advice, but do not explicitly mention that you are reading their profile unless necessary.";
+    }
 
-  if (lowerMsg.includes('stress') || lowerMsg.includes('anxiety') || lowerMsg.includes('mental')) {
-    return `🧘 **Stress Management Tips:**\n\n1. Practice deep breathing exercises (4-7-8 technique)\n2. Try 10 minutes of daily meditation\n3. Maintain a consistent sleep schedule (7-8 hours)\n4. Limit caffeine and screen time before bed\n\nWould you like me to suggest specific relaxation techniques?`;
-  }
+    // Format chat history for Gemini
+    const formattedHistory = chatHistory ? chatHistory.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    })) : [];
 
-  if (lowerMsg.includes('symptom') || lowerMsg.includes('pain') || lowerMsg.includes('fever')) {
-    return `⚠️ I can help track your symptoms, but please remember I am an AI assistant and **not a substitute for professional medical advice**.\n\nCould you describe your symptoms in more detail? For example:\n- When did they start?\n- How severe are they (1-10)?\n- Any other accompanying symptoms?\n\nBased on your description, I can suggest whether you should consult a doctor urgently.`;
-  }
+    const chat = model.startChat({
+      history: formattedHistory,
+      systemInstruction: {
+        role: "system",
+        parts: [{ text: systemPrompt }]
+      }
+    });
 
-  if (lowerMsg.includes('appointment') || lowerMsg.includes('doctor') || lowerMsg.includes('consult')) {
-    return `📅 You can book an appointment directly from the **Appointments** section in your dashboard. Based on your health profile, I would recommend:\n\n- **General Physician** for routine checkups\n- **Cardiologist** if you have heart-related concerns\n- **Endocrinologist** for diabetes management\n\nWould you like me to help you identify the right specialist?`;
+    const result = await chat.sendMessage(message);
+    return result.response.text();
+  } catch (error) {
+    console.error("Gemini API Error:", error);
+    return "I'm sorry, I'm currently experiencing technical difficulties. Please try again later.";
   }
-
-  if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('hey')) {
-    return `👋 Hello! I'm your **HealthHub+ AI Assistant**. I can help you with:\n\n- 🔍 Understanding your health risks\n- 🥗 Personalized diet plans\n- 🏃 Exercise recommendations\n- 🧘 Stress management tips\n- 📅 Booking appointments\n\nHow can I assist you today?`;
-  }
-
-  return `Thank you for your message. I can help you with health insights, diet plans, exercise routines, and understanding your medical reports. Could you please be more specific about what you'd like to know?`;
 };
 
 /**
@@ -66,6 +73,11 @@ export const sendMessage = async (req, res, next) => {
       });
     }
 
+    const currentSessionId = sessionId || crypto.randomUUID();
+
+    // Fetch existing chat for history
+    let chat = await AIAssistantChat.findOne({ sessionId: currentSessionId });
+
     // Fetch patient context for personalized responses
     let patientContext = null;
     try {
@@ -77,10 +89,11 @@ export const sendMessage = async (req, res, next) => {
     const contextUsed = !!patientContext;
 
     // Generate AI response
-    const aiResponseText = generateMockResponse(message, patientContext);
-
-    // Create or update the chat session
-    const currentSessionId = sessionId || crypto.randomUUID();
+    const aiResponseText = await generateGeminiResponse(
+      message, 
+      patientContext, 
+      chat ? chat.messages : []
+    );
 
     const userMessage = {
       role: 'user',
@@ -94,8 +107,8 @@ export const sendMessage = async (req, res, next) => {
       timestamp: new Date(),
     };
 
-    let chat = await AIAssistantChat.findOne({ sessionId: currentSessionId });
-
+    // We already fetched 'chat' at the beginning, so no need to fetch it again
+    // Just update the existing chat object if it exists
     if (chat) {
       chat.messages.push(userMessage, assistantMessage);
       chat.contextUsed = chat.contextUsed || contextUsed;

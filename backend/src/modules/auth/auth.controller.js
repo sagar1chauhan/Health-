@@ -53,6 +53,15 @@ export const register = async (req, res, next) => {
       await DoctorProfile.create({ userId: user._id, specialization: req.body.specialization || 'General' });
     }
 
+    // Generate email verification token and send email
+    try {
+      const verificationToken = user.createEmailVerificationToken();
+      await user.save({ validateBeforeSave: false });
+      await sendVerificationEmail(user, verificationToken);
+    } catch (emailErr) {
+      console.error('Email verification send failed (non-blocking):', emailErr.message);
+    }
+
     // Generate tokens
     const tokens = generateTokens(user._id);
 
@@ -69,7 +78,7 @@ export const register = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful',
+      message: 'Registration successful. Please check your email to verify your account.',
       user: {
         id: user._id,
         name: user.name,
@@ -293,6 +302,66 @@ export const resetPassword = async (req, res, next) => {
       success: true,
       message: 'Password reset successful',
       tokens,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify email
+// @route   GET /api/auth/verify-email/:token
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      throw new AppError('Verification token is invalid or has expired', 400);
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully! You can now use all features.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Resend verification email
+// @route   POST /api/auth/resend-verification
+export const resendVerificationEmail = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified.',
+      });
+    }
+
+    const verificationToken = user.createEmailVerificationToken();
+    await user.save({ validateBeforeSave: false });
+
+    await sendVerificationEmail(user, verificationToken);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification email sent. Please check your inbox.',
     });
   } catch (error) {
     next(error);
