@@ -26,6 +26,7 @@ import analyticsRoutes from './modules/analytics/analytics.routes.js';
 import aiAssistantRoutes from './modules/ai-assistant/ai-assistant.routes.js';
 
 const app = express();
+app.set('trust proxy', 1); // Trust reverse proxy for secure cookies
 const server = createServer(app);
 
 // Connect Database
