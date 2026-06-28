@@ -1,13 +1,13 @@
 {
   "name": "healthhub-backend",
   "version": "1.0.0",
-  "description": "HealthHub+ Backend — Express + MongoDB API Server",
+  "description": "HealthHub+ Backend \u2014 Express + MongoDB API Server",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "build": "echo \"No build step required for backend\"",
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
+    "build": "node api.js && echo \"No build step required for backend\"",
+    "dev": "node api.js && nodemon src/server.js",
+    "start": "node api.js && node src/server.js",
     "lint": "eslint src/",
     "seed": "node src/scripts/seed.js"
   },
