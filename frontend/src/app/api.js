@@ -22,6 +22,17 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Interceptor to handle token refresh logic here if needed
 api.interceptors.response.use(
   (response) => response,
@@ -33,6 +44,9 @@ api.interceptors.response.use(
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
+          if (token) {
+            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+          }
           return api(originalRequest);
         }).catch(err => {
           return Promise.reject(err);
@@ -44,14 +58,29 @@ api.interceptors.response.use(
 
       try {
         const baseURL = api.defaults.baseURL;
-        await axios.post(`${baseURL}/auth/refresh-token`, {}, { withCredentials: true });
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        const res = await axios.post(`${baseURL}/auth/refresh-token`, { refreshToken }, { withCredentials: true });
+        
+        if (res.data.tokens) {
+          localStorage.setItem('accessToken', res.data.tokens.accessToken);
+          localStorage.setItem('refreshToken', res.data.tokens.refreshToken);
+        }
+        
+        const newAccessToken = res.data.tokens?.accessToken || localStorage.getItem('accessToken');
         isRefreshing = false;
-        processQueue(null, 'refreshed');
+        processQueue(null, newAccessToken);
+        
+        if (newAccessToken) {
+          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+        }
         return api(originalRequest);
       } catch (err) {
         isRefreshing = false;
         processQueue(err, null);
         // Handle logout
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         if (window.location.pathname !== '/auth/login' && window.location.pathname !== '/auth/register') {
           window.location.href = '/auth/login';
         }
