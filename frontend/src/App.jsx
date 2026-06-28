@@ -31,8 +31,9 @@ function App() {
   // Connect socket when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      // Connect socket (cookies handle auth, but we also pass token from cookie)
-      connectSocket();
+      // Connect socket (pass token from localStorage)
+      const token = localStorage.getItem('accessToken');
+      connectSocket(token);
 
       // Fetch existing notifications
       dispatch(fetchNotifications());
